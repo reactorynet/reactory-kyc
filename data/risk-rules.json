@@ -1,0 +1,134 @@
+{
+  "version": "1.0.0",
+  "description": "Risk assessment rules for KYC verification",
+  "thresholds": {
+    "LOW": 70,
+    "MEDIUM": 50,
+    "HIGH": 30,
+    "CRITICAL": 0
+  },
+  "rules": [
+    {
+      "id": "document_validity",
+      "name": "Document Validity",
+      "description": "Validates that all documents are not expired and are properly issued",
+      "weight": 0.25,
+      "baseScore": 100,
+      "enabled": true,
+      "penalties": {
+        "expired_document": 30,
+        "invalid_document": 40,
+        "missing_expiry": 10
+      }
+    },
+    {
+      "id": "document_completeness",
+      "name": "Document Completeness",
+      "description": "Checks if all required documents for the verification level are provided",
+      "weight": 0.20,
+      "baseScore": 100,
+      "enabled": true,
+      "requiredDocumentsByLevel": {
+        "BASIC": ["NATIONAL_ID", "SELFIE"],
+        "INTERMEDIATE": ["NATIONAL_ID", "PROOF_OF_ADDRESS", "SELFIE"],
+        "ADVANCED": ["PASSPORT", "PROOF_OF_ADDRESS", "BANK_STATEMENT", "SELFIE"],
+        "ENHANCED": ["PASSPORT", "NATIONAL_ID", "PROOF_OF_ADDRESS", "BANK_STATEMENT", "SELFIE", "LIVENESS_VIDEO"]
+      }
+    },
+    {
+      "id": "document_quality",
+      "name": "Document Quality",
+      "description": "Assesses the quality of uploaded documents (clarity, completeness, authenticity)",
+      "weight": 0.15,
+      "baseScore": 100,
+      "enabled": true,
+      "qualityMetrics": {
+        "resolution": true,
+        "clarity": true,
+        "completeness": true,
+        "tampering_detection": true
+      }
+    },
+    {
+      "id": "user_history",
+      "name": "User History",
+      "description": "Evaluates user's verification history and behavior patterns",
+      "weight": 0.15,
+      "baseScore": 80,
+      "enabled": true,
+      "factors": {
+        "successful_verifications": {
+          "boost": 5,
+          "max_boost": 20
+        },
+        "rejected_verifications": {
+          "penalty": 15,
+          "max_penalty": 45
+        },
+        "no_history_score": 70
+      }
+    },
+    {
+      "id": "geographic_risk",
+      "name": "Geographic Risk",
+      "description": "Assesses risk based on country of issuance and user location",
+      "weight": 0.10,
+      "baseScore": 80,
+      "enabled": true,
+      "highRiskCountries": [],
+      "mediumRiskCountries": [],
+      "sanctions": {
+        "check_sanctions_list": true,
+        "check_pep_list": true
+      }
+    },
+    {
+      "id": "provider_confidence",
+      "name": "Provider Confidence",
+      "description": "Confidence score provided by external KYC verification providers",
+      "weight": 0.10,
+      "baseScore": 60,
+      "enabled": true,
+      "providers": {
+        "trulio": {
+          "weight_multiplier": 1.0
+        },
+        "onfido": {
+          "weight_multiplier": 1.0
+        }
+      }
+    },
+    {
+      "id": "data_consistency",
+      "name": "Data Consistency",
+      "description": "Checks consistency of information across multiple documents",
+      "weight": 0.05,
+      "baseScore": 90,
+      "enabled": true,
+      "checks": {
+        "name_match": true,
+        "dob_match": true,
+        "address_match": true,
+        "document_number_format": true
+      }
+    }
+  ],
+  "autoApprovalThresholds": {
+    "BASIC": 65,
+    "INTERMEDIATE": 70,
+    "ADVANCED": 75,
+    "ENHANCED": 80
+  },
+  "manualReviewTriggers": {
+    "score_below": 50,
+    "high_risk_country": true,
+    "expired_documents": true,
+    "data_inconsistency": true,
+    "provider_failure": true
+  },
+  "rejectionThresholds": {
+    "automatic_rejection_score": 20,
+    "critical_risk_level": true
+  }
+}
+
