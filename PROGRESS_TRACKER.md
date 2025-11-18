@@ -24,9 +24,11 @@ Documentation:   [██░░░░░░░░] 20%
 ---
 
 ## 🎯 Phase 1: Foundation & Core Dependencies (0% Complete)
+*Important* create a git feature branch for implementing the KYC module. For each step we create a chore branch from the feature branch and when we complete tasks successfully we merge the changes back into our feature branch. Always confirm before merging, but create as logical checkins of tasks so we always have a stable branch to work with. All git actions must be executed in /Users/wweber/Source/reactory/reactory-express-server/src/modules/reactory-kyc for all the KYC activities and only the `reactory-core` module is part of the /Users/wweber/Source/reactory/reactory-express-server git repo.
+
 
 ### 1.1 Prerequisites & Setup
-- [ ] **Task 1.1.1**: Review and understand existing Reactory services
+- [ ] **Task 1.1.1**: Review and understand existing Reactory services  
   - [ ] Study `core.ReactoryFileService@1.0.0` implementation
   - [ ] Study `Audit` model in reactory-core
   - [ ] Review `reactory-queue` module structure
@@ -55,6 +57,7 @@ Documentation:   [██░░░░░░░░] 20%
     - Unit tests
 
 - [ ] **Task 1.1.3**: Set up reactory-kyc module structure
+  - [ ] Study `reactory-reactor` and `zepz-engineer` as examples of how a modules are structured.
   - [ ] Create module directory structure
   - [ ] Initialize package.json with dependencies
   - [ ] Create index.ts with ReactoryModuleDefinition

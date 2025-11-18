@@ -1,0 +1,33 @@
+{
+  "kyc": {
+    "verification": {
+      "title": "Identity Verification",
+      "subtitle": "Verify your identity to continue",
+      "initiated": "Verification initiated",
+      "pending_documents": "Awaiting documents",
+      "submitted": "Under review",
+      "completed": "Verification complete",
+      "rejected": "Verification rejected"
+    },
+    "documents": {
+      "upload": "Upload Document",
+      "types": {
+        "passport": "Passport",
+        "national_id": "National ID",
+        "drivers_license": "Driver's License",
+        "proof_of_address": "Proof of Address",
+        "bank_statement": "Bank Statement",
+        "utility_bill": "Utility Bill",
+        "selfie": "Selfie Photo",
+        "liveness_video": "Liveness Video"
+      }
+    },
+    "errors": {
+      "upload_failed": "Document upload failed",
+      "invalid_document": "Invalid document",
+      "expired_document": "Document has expired",
+      "verification_failed": "Verification failed"
+    }
+  }
+}
+
