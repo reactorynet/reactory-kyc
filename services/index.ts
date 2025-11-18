@@ -5,17 +5,18 @@
  */
 
 import Reactory from '@reactory/reactory-core';
+import { KYCDocumentServiceDefinition } from './KYCDocumentService';
 
 // Services will be imported here as they are implemented
 // import { KYCServiceDefinition } from './KYCService';
-// import { KYCDocumentServiceDefinition } from './KYCDocumentService';
 // import { RiskAssessmentServiceDefinition } from './RiskAssessmentService';
 // import { KYCAuditServiceDefinition } from './KYCAuditService';
 // import { ProviderServiceDefinition } from './ProviderService';
 // import { ReportingServiceDefinition } from './ReportingService';
 
 const services: Reactory.Service.IReactoryServiceDefinition<any>[] = [
-  // Service definitions will be added here
+  KYCDocumentServiceDefinition,
+  // Additional service definitions will be added here
 ];
 
 export default services;
