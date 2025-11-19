@@ -186,7 +186,7 @@ KYCVerificationSchema.statics = {
   }
 };
 
-const KYCVerification: Model<IKYCVerificationDocument> = mongoose.model<IKYCVerificationDocument>(
+export const KYCVerification: Model<IKYCVerificationDocument> = mongoose.model<IKYCVerificationDocument>(
   'KYCVerification',
   KYCVerificationSchema,
   'kyc_verifications'

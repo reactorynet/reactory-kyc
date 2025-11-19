@@ -13,7 +13,6 @@
   "author": "Reactory Team",
   "license": "MIT",
   "dependencies": {
-    "@reactory/reactory-core": "*",
     "joi": "^17.9.0",
     "sharp": "^0.32.0",
     "pdf-parse": "^1.1.1",

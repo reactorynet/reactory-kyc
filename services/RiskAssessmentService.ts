@@ -1,7 +1,7 @@
 import Reactory from '@reactory/reactory-core';
 import { ObjectId } from 'mongodb';
-import { service } from '@reactory/server-core/models/graphql/decorators/resolver';
-import { roles } from '@reactory/server-core/models/graphql/decorators';
+import { service } from '@reactory/server-core/application/decorators/service';
+import { roles } from '@reactory/server-core/authentication/decorators';
 import ApiError from '@reactory/server-core/exceptions';
 import logger from '@reactory/server-core/logging';
 import { KYCRiskScore, IKYCRiskScoreDocument, IRiskFactor } from '../models/KYCRiskScore';

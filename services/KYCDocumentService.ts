@@ -2,8 +2,8 @@ import Reactory from '@reactory/reactory-core';
 import { ObjectId } from 'mongodb';
 import crypto from 'crypto';
 import sharp from 'sharp';
-import { service } from '@reactory/server-core/models/graphql/decorators/resolver';
-import { roles } from '@reactory/server-core/models/graphql/decorators';
+import { service } from '@reactory/server-core/application/decorators/service';
+import { roles } from '@reactory/server-core/authentication/decorators';
 import ApiError from '@reactory/server-core/exceptions';
 import logger from '@reactory/server-core/logging';
 import { KYCDocument, IKYCDocumentDocument } from '../models/KYCDocument';
@@ -190,19 +190,8 @@ class KYCDocumentService implements Reactory.Service.IReactoryService {
         throw new ApiError('Failed to upload file');
       }
 
-      // Read file content for hash calculation
-      const { createReadStream } = await file;
-      const stream = createReadStream();
-      const chunks: Buffer[] = [];
-
-      await new Promise((resolve, reject) => {
-        stream.on('data', (chunk) => chunks.push(chunk));
-        stream.on('end', resolve);
-        stream.on('error', reject);
-      });
-
-      const fileBuffer = Buffer.concat(chunks);
-      const fileHash = await this.calculateFileHash(fileBuffer);
+      // Use the file hash from ReactoryFile (already calculated during upload)
+      const fileHash = reactoryFile.hash || crypto.createHash('sha256').update(reactoryFile.id.toString()).digest('hex');
 
       // Create KYC document record
       const kycDocument = new KYCDocument({
@@ -296,7 +285,7 @@ class KYCDocumentService implements Reactory.Service.IReactoryService {
       // Check authorization
       const verification = document.verificationId as any;
       const isOwner = verification.userId.toString() === this.context.user._id.toString();
-      const isReviewer = this.context.hasRole(['KYC_REVIEWER', 'ADMIN']);
+      const isReviewer = this.context.hasRole('KYC_REVIEWER') || this.context.hasRole('ADMIN');
 
       if (!isOwner && !isReviewer) {
         throw new ApiError('Unauthorized: Cannot access this document');
@@ -306,7 +295,7 @@ class KYCDocumentService implements Reactory.Service.IReactoryService {
       if (this.auditService) {
         await this.auditService.logAuditEvent({
           actorType: 'user',
-          actorId: this.context.user._id.toString(),
+          actorId: String(this.context.user._id),
           action: 'kyc.document.view',
           resourceType: 'kyc_document',
           resourceId: documentId,
@@ -358,7 +347,7 @@ class KYCDocumentService implements Reactory.Service.IReactoryService {
       if (this.auditService) {
         await this.auditService.logAuditEvent({
           actorType: 'user',
-          actorId: this.context.user._id.toString(),
+          actorId: String(this.context.user._id),
           action: 'kyc.document.validate',
           resourceType: 'kyc_document',
           resourceId: documentId,
@@ -434,7 +423,7 @@ class KYCDocumentService implements Reactory.Service.IReactoryService {
       // Check authorization
       const verification = document.verificationId as any;
       const isOwner = verification.userId.toString() === this.context.user._id.toString();
-      const isAdmin = this.context.hasRole(['ADMIN']);
+      const isAdmin = this.context.hasRole('ADMIN');
 
       if (!isOwner && !isAdmin) {
         throw new ApiError('Unauthorized: Cannot delete this document');
@@ -462,7 +451,7 @@ class KYCDocumentService implements Reactory.Service.IReactoryService {
       if (this.auditService) {
         await this.auditService.logAuditEvent({
           actorType: 'user',
-          actorId: this.context.user._id.toString(),
+          actorId: String(this.context.user._id),
           action: 'kyc.document.delete',
           resourceType: 'kyc_document',
           resourceId: documentId,
@@ -564,7 +553,7 @@ class KYCDocumentService implements Reactory.Service.IReactoryService {
 
       // Check authorization
       const isOwner = verification.userId.toString() === this.context.user._id.toString();
-      const isReviewer = this.context.hasRole(['KYC_REVIEWER', 'ADMIN']);
+      const isReviewer = this.context.hasRole('KYC_REVIEWER') || this.context.hasRole('ADMIN');
 
       if (!isOwner && !isReviewer) {
         throw new ApiError('Unauthorized: Cannot access documents for this verification');

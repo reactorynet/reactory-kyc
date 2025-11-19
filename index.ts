@@ -20,9 +20,7 @@ const ReactoryKYCModule: Reactory.Server.IReactoryModule = {
   name: 'KYC',
   description: 'Know Your Customer (KYC) identity verification and compliance module',
   dependencies: [
-    'core.ReactoryFileService@1.0.0',
-    'core.ReactoryAuditService@1.0.0',
-    'core.ReactoryWorkflowService@1.0.0'
+    'reactory-core'
   ],
   priority: 10,
   graphDefinitions: GraphqlDefinitions,

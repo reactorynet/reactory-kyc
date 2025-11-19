@@ -178,7 +178,7 @@ KYCDocumentSchema.statics = {
   }
 };
 
-const KYCDocument: Model<IKYCDocumentDocument> = mongoose.model<IKYCDocumentDocument>(
+export const KYCDocument: Model<IKYCDocumentDocument> = mongoose.model<IKYCDocumentDocument>(
   'KYCDocument',
   KYCDocumentSchema,
   'kyc_documents'
