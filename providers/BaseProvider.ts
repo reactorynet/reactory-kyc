@@ -5,8 +5,7 @@ import crypto from 'crypto';
 import {
   IProviderConfig,
   IProviderCheckRequest,
-  IProviderCheckResponse,
-  IProviderCheckStatus,
+  IProviderCheckResponse,  
   IProviderWebhookPayload
 } from '../types/provider.types';
 
@@ -102,7 +101,7 @@ export abstract class BaseProvider {
   /**
    * Get the status of a verification check
    */
-  abstract getCheckStatus(checkId: string): Promise<IProviderCheckStatus>;
+  abstract getCheckStatus(checkId: string): Promise<IProviderCheckResponse>;
 
   /**
    * Get the result of a completed verification check

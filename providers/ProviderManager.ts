@@ -4,8 +4,7 @@ import { BaseProvider } from './BaseProvider';
 import { KYCProvider, IKYCProviderDocument } from '../models/KYCProvider';
 import {
   IProviderCheckRequest,
-  IProviderCheckResponse,
-  IProviderCheckStatus,
+  IProviderCheckResponse,  
   IProviderWebhookPayload
 } from '../types/provider.types';
 import ApiError from '@reactory/server-core/exceptions';
@@ -131,7 +130,7 @@ export class ProviderManager {
   /**
    * Get check status from provider
    */
-  async getCheckStatus(providerId: string, checkId: string): Promise<IProviderCheckStatus> {
+  async getCheckStatus(providerId: string, checkId: string): Promise<IProviderCheckResponse> {
     const provider = this.getProvider(providerId);
     return await provider.getCheckStatus(checkId);
   }

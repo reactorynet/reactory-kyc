@@ -305,7 +305,7 @@ KYCProviderSchema.statics = {
   }
 };
 
-const KYCProvider: Model<IKYCProviderDocument> = mongoose.model<IKYCProviderDocument>(
+export const KYCProvider: Model<IKYCProviderDocument> = mongoose.model<IKYCProviderDocument>(
   'KYCProvider',
   KYCProviderSchema,
   'kyc_providers'
