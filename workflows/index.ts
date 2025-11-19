@@ -5,10 +5,10 @@
  */
 
 import Reactory from '@reactory/reactory-core';
-import ManualVerificationWorkflow from '../workflows/ManualVerificationWorkflow';
-import AutomatedVerificationWorkflow from '../workflows/AutomatedVerificationWorkflow';
-import HybridVerificationWorkflow from '../workflows/HybridVerificationWorkflow';
-import DocumentVerificationWorkflow from '../workflows/DocumentVerificationWorkflow';
+import ManualVerificationWorkflow from './ManualVerificationWorkflow';
+import AutomatedVerificationWorkflow from './AutomatedVerificationWorkflow';
+import HybridVerificationWorkflow from './HybridVerificationWorkflow';
+import DocumentVerificationWorkflow from './DocumentVerificationWorkflow';
 
 const workflows: Reactory.Server.IReactoryWorkflowDefinition[] = [
   ManualVerificationWorkflow,
