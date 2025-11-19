@@ -1,14 +1,13 @@
 /**
  * KYC Providers
  * 
- * Export all provider implementations
+ * Export all provider classes and utilities
  */
 
-// Providers will be imported here as they are implemented
-// export { default as BaseProvider } from './BaseProvider';
-// export { default as TrulioProvider } from './TrulioProvider';
-// export { default as OnfidoProvider } from './OnfidoProvider';
-// export { default as ProviderManager } from './ProviderManager';
+export { BaseProvider } from './BaseProvider';
+export { ProviderManager } from './ProviderManager';
+export * from './utils';
 
-export default {};
-
+// Provider implementations will be exported as they are created
+// export { TrulioProvider } from './TrulioProvider';
+// export { OnfidoProvider } from './OnfidoProvider';
