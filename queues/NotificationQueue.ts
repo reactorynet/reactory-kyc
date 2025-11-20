@@ -1,11 +1,12 @@
 import Reactory from '@reactory/reactory-core';
 import logger from '@reactory/server-core/logging';
+import { QueueProvider } from '@reactory/server-modules/reactory-queue/services/queue/QueueProvider';
 
 /**
  * Notification Queue Handler
  * 
  * Handles asynchronous notification delivery (email, SMS, push).
- * Integrates with Reactory postal.js messaging system.
+ * Uses QueueProvider for flexible queue backend support.
  */
 
 export interface INotificationJob {
@@ -24,23 +25,49 @@ export interface INotificationJob {
 
 export class NotificationQueueHandler {
   private context: Reactory.Server.IReactoryContext;
-  private channel: string = 'kyc.notification';
+  private queueProvider: QueueProvider;
+  private queueService: any;
+  private queueName: string = 'kyc-notification';
 
   constructor(context: Reactory.Server.IReactoryContext) {
     this.context = context;
-    this.setupSubscriptions();
+    this.initializeQueue();
   }
 
   /**
-   * Set up postal.js subscriptions
+   * Initialize queue provider and service
    */
-  private setupSubscriptions(): void {
-    this.context.subscribe(`${this.channel}.send`, this.sendNotification.bind(this));
-    this.context.subscribe(`${this.channel}.retry`, this.retryNotification.bind(this));
+  private async initializeQueue(): Promise<void> {
+    try {
+      this.queueProvider = this.context.getService('reactory.QueueProvider@1.0.0') as QueueProvider;
+      
+      if (!this.queueProvider) {
+        logger.warn('[NotificationQueue] QueueProvider not available');
+        return;
+      }
 
-    logger.info('[NotificationQueue] Subscriptions established', {
-      channel: this.channel
-    });
+      this.queueService = this.queueProvider.getDefaultProvider();
+
+      if (this.queueService) {
+        await this.setupQueueProcessors();
+        logger.info('[NotificationQueue] Queue initialized successfully');
+      }
+    } catch (error) {
+      logger.error('[NotificationQueue] Error initializing queue:', error);
+    }
+  }
+
+  /**
+   * Set up queue processors
+   */
+  private async setupQueueProcessors(): Promise<void> {
+    if (!this.queueService) return;
+
+    await this.queueService.addProcessor(
+      this.queueName,
+      'send',
+      this.sendNotification.bind(this)
+    );
   }
 
   /**
@@ -54,11 +81,22 @@ export class NotificationQueueHandler {
         priority: job.priority || 'normal'
       });
 
-      this.context.publish(`${this.channel}.send`, {
-        data: job,
-        timestamp: new Date(),
-        priority: job.priority || 'normal'
-      });
+      if (this.queueService) {
+        await this.queueService.addJob(this.queueName, {
+          type: 'send',
+          data: job,
+          options: {
+            priority: this.getPriorityValue(job.priority),
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 2000
+            }
+          }
+        });
+      } else {
+        await this.sendNotification({ data: job });
+      }
     } catch (error) {
       logger.error('[NotificationQueue] Error queuing notification:', error);
       throw error;
@@ -68,8 +106,8 @@ export class NotificationQueueHandler {
   /**
    * Send a notification
    */
-  private async sendNotification(data: any, envelope: any): Promise<void> {
-    const job: INotificationJob = data.data;
+  private async sendNotification(jobData: any): Promise<void> {
+    const job: INotificationJob = jobData.data;
 
     try {
       logger.info(`[NotificationQueue] Sending ${job.type} notification: ${job.template}`);
@@ -90,30 +128,28 @@ export class NotificationQueueHandler {
 
       logger.info(`[NotificationQueue] Notification sent successfully: ${job.template}`);
 
-      this.context.publish(`${this.channel}.sent`, {
-        type: job.type,
-        template: job.template,
-        success: true,
-        sentAt: new Date()
-      });
+      if (this.queueService) {
+        await this.queueService.emit(this.queueName, 'sent', {
+          type: job.type,
+          template: job.template,
+          success: true,
+          sentAt: new Date()
+        });
+      }
 
     } catch (error) {
       logger.error(`[NotificationQueue] Error sending notification: ${job.template}`, error);
 
-      this.context.publish(`${this.channel}.failed`, {
-        type: job.type,
-        template: job.template,
-        error: error.message,
-        failedAt: new Date()
-      });
-
-      if (this.shouldRetry(job, error)) {
-        this.context.publish(`${this.channel}.retry`, {
-          data: job,
-          attempt: (job.metadata?.attempt || 0) + 1,
-          error: error.message
+      if (this.queueService) {
+        await this.queueService.emit(this.queueName, 'failed', {
+          type: job.type,
+          template: job.template,
+          error: error.message,
+          failedAt: new Date()
         });
       }
+
+      throw error;
     }
   }
 
@@ -124,7 +160,6 @@ export class NotificationQueueHandler {
     logger.info(`[NotificationQueue] Sending email to: ${job.recipient.email}`);
 
     // In a real implementation, this would use an email service
-    // For now, just log the email details
     logger.info('[NotificationQueue] Email details:', {
       to: job.recipient.email,
       template: job.template,
@@ -170,50 +205,15 @@ export class NotificationQueueHandler {
   }
 
   /**
-   * Retry a failed notification
+   * Get priority value for queue system
    */
-  private async retryNotification(data: any, envelope: any): Promise<void> {
-    const job: INotificationJob = data.data;
-    const attempt = data.attempt || 1;
-    const maxAttempts = 3;
-
-    if (attempt > maxAttempts) {
-      logger.warn(`[NotificationQueue] Max retry attempts reached for: ${job.template}`);
-      return;
-    }
-
-    logger.info(`[NotificationQueue] Retrying notification (attempt ${attempt}): ${job.template}`);
-
-    const delay = Math.pow(2, attempt) * 1000;
-    await new Promise(resolve => setTimeout(resolve, delay));
-
-    job.metadata = {
-      ...job.metadata,
-      attempt,
-      lastError: data.error,
-      retriedAt: new Date()
+  private getPriorityValue(priority?: string): number {
+    const priorities: Record<string, number> = {
+      'high': 1,
+      'normal': 2,
+      'low': 3
     };
-
-    this.context.publish(`${this.channel}.send`, {
-      data: job,
-      timestamp: new Date()
-    });
-  }
-
-  /**
-   * Determine if a notification should be retried
-   */
-  private shouldRetry(job: INotificationJob, error: any): boolean {
-    const attempt = job.metadata?.attempt || 0;
-    if (attempt >= 3) return false;
-
-    // Don't retry invalid recipient errors
-    if (error.message?.includes('Invalid') || error.message?.includes('Not found')) {
-      return false;
-    }
-
-    // Retry for temporary errors
-    return true;
+    return priorities[priority || 'normal'] || 2;
   }
 
   /**
@@ -254,4 +254,3 @@ export class NotificationQueueHandler {
 }
 
 export default NotificationQueueHandler;
-

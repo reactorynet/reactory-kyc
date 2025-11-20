@@ -1,11 +1,12 @@
 import Reactory from '@reactory/reactory-core';
 import logger from '@reactory/server-core/logging';
+import { QueueProvider } from '@reactory/server-modules/reactory-queue/services/queue/QueueProvider';
 
 /**
  * Document Processing Queue Handler
  * 
  * Handles asynchronous document processing jobs (OCR, validation, quality checks).
- * Integrates with Reactory postal.js messaging system.
+ * Uses QueueProvider for flexible queue backend support.
  */
 
 export interface IDocumentProcessingJob {
@@ -19,24 +20,55 @@ export interface IDocumentProcessingJob {
 
 export class DocumentProcessingQueueHandler {
   private context: Reactory.Server.IReactoryContext;
-  private channel: string = 'kyc.document.processing';
+  private queueProvider: QueueProvider;
+  private queueService: any;
+  private queueName: string = 'kyc-document-processing';
 
   constructor(context: Reactory.Server.IReactoryContext) {
     this.context = context;
-    this.setupSubscriptions();
+    this.initializeQueue();
   }
 
   /**
-   * Set up postal.js subscriptions
+   * Initialize queue provider and service
    */
-  private setupSubscriptions(): void {
-    this.context.subscribe(`${this.channel}.process`, this.processDocument.bind(this));
-    this.context.subscribe(`${this.channel}.retry`, this.retryDocument.bind(this));
-    this.context.subscribe(`${this.channel}.batch`, this.processBatch.bind(this));
+  private async initializeQueue(): Promise<void> {
+    try {
+      this.queueProvider = this.context.getService('reactory.QueueProvider@1.0.0') as QueueProvider;
+      
+      if (!this.queueProvider) {
+        logger.warn('[DocumentProcessingQueue] QueueProvider not available');
+        return;
+      }
 
-    logger.info('[DocumentProcessingQueue] Subscriptions established', {
-      channel: this.channel
-    });
+      this.queueService = this.queueProvider.getDefaultProvider();
+
+      if (this.queueService) {
+        await this.setupQueueProcessors();
+        logger.info('[DocumentProcessingQueue] Queue initialized successfully');
+      }
+    } catch (error) {
+      logger.error('[DocumentProcessingQueue] Error initializing queue:', error);
+    }
+  }
+
+  /**
+   * Set up queue processors
+   */
+  private async setupQueueProcessors(): Promise<void> {
+    if (!this.queueService) return;
+
+    await this.queueService.addProcessor(
+      this.queueName,
+      'process',
+      this.processDocument.bind(this)
+    );
+
+    await this.queueService.addProcessor(
+      this.queueName,
+      'batch',
+      this.processBatch.bind(this)
+    );
   }
 
   /**
@@ -50,11 +82,22 @@ export class DocumentProcessingQueueHandler {
         priority: job.priority || 'normal'
       });
 
-      this.context.publish(`${this.channel}.process`, {
-        data: job,
-        timestamp: new Date(),
-        priority: job.priority || 'normal'
-      });
+      if (this.queueService) {
+        await this.queueService.addJob(this.queueName, {
+          type: 'process',
+          data: job,
+          options: {
+            priority: this.getPriorityValue(job.priority),
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 2000
+            }
+          }
+        });
+      } else {
+        await this.processDocument({ data: job });
+      }
 
       // Log to audit
       const auditService: any = this.context.getService('reactory-kyc.KYCAuditService@1.0.0');
@@ -82,18 +125,27 @@ export class DocumentProcessingQueueHandler {
   async queueBatch(jobs: IDocumentProcessingJob[]): Promise<void> {
     logger.info(`[DocumentProcessingQueue] Queuing batch of ${jobs.length} documents`);
 
-    this.context.publish(`${this.channel}.batch`, {
-      jobs,
-      timestamp: new Date(),
-      count: jobs.length
-    });
+    if (this.queueService) {
+      await this.queueService.addJob(this.queueName, {
+        type: 'batch',
+        data: { jobs },
+        options: {
+          priority: 2 // High priority for batches
+        }
+      });
+    } else {
+      // Process sequentially if no queue service
+      for (const job of jobs) {
+        await this.queueDocument(job);
+      }
+    }
   }
 
   /**
    * Process a document
    */
-  private async processDocument(data: any, envelope: any): Promise<void> {
-    const job: IDocumentProcessingJob = data.data;
+  private async processDocument(jobData: any): Promise<void> {
+    const job: IDocumentProcessingJob = jobData.data;
 
     try {
       logger.info(`[DocumentProcessingQueue] Processing document: ${job.documentId}`);
@@ -107,33 +159,31 @@ export class DocumentProcessingQueueHandler {
 
       logger.info(`[DocumentProcessingQueue] Document processed successfully: ${job.documentId}`);
 
-      // Publish completion event
-      this.context.publish(`${this.channel}.completed`, {
-        documentId: job.documentId,
-        verificationId: job.verificationId,
-        success: true,
-        completedAt: new Date()
-      });
+      // Emit completion event
+      if (this.queueService) {
+        await this.queueService.emit(this.queueName, 'completed', {
+          documentId: job.documentId,
+          verificationId: job.verificationId,
+          success: true,
+          completedAt: new Date()
+        });
+      }
 
-      // Notify verification queue if all documents processed
+      // Check if all documents for verification are processed
       await this.checkVerificationDocuments(job.verificationId);
 
     } catch (error) {
       logger.error(`[DocumentProcessingQueue] Error processing document: ${job.documentId}`, error);
 
-      this.context.publish(`${this.channel}.failed`, {
-        documentId: job.documentId,
-        error: error.message,
-        failedAt: new Date()
-      });
-
-      if (this.shouldRetry(job, error)) {
-        this.context.publish(`${this.channel}.retry`, {
-          data: job,
-          attempt: (job.metadata?.attempt || 0) + 1,
-          error: error.message
+      if (this.queueService) {
+        await this.queueService.emit(this.queueName, 'failed', {
+          documentId: job.documentId,
+          error: error.message,
+          failedAt: new Date()
         });
       }
+
+      throw error;
     }
   }
 
@@ -160,12 +210,10 @@ export class DocumentProcessingQueueHandler {
         break;
 
       case 'quality_check':
-        // Quality check would be performed by DocumentVerificationWorkflow
         logger.info(`[DocumentProcessingQueue] Quality check queued for: ${job.documentId}`);
         break;
 
       case 'fraud_detection':
-        // Fraud detection would be performed by DocumentVerificationWorkflow
         logger.info(`[DocumentProcessingQueue] Fraud detection queued for: ${job.documentId}`);
         break;
 
@@ -177,55 +225,17 @@ export class DocumentProcessingQueueHandler {
   /**
    * Process a batch of documents
    */
-  private async processBatch(data: any, envelope: any): Promise<void> {
-    const jobs: IDocumentProcessingJob[] = data.jobs;
+  private async processBatch(jobData: any): Promise<void> {
+    const jobs: IDocumentProcessingJob[] = jobData.data.jobs;
 
     logger.info(`[DocumentProcessingQueue] Processing batch of ${jobs.length} documents`);
 
-    // Process documents in parallel (with concurrency limit)
+    // Process documents in parallel with concurrency limit
     const concurrency = 5;
     for (let i = 0; i < jobs.length; i += concurrency) {
       const batch = jobs.slice(i, i + concurrency);
-      await Promise.all(
-        batch.map(job =>
-          this.context.publish(`${this.channel}.process`, {
-            data: job,
-            timestamp: new Date()
-          })
-        )
-      );
+      await Promise.all(batch.map(job => this.processDocument({ data: job })));
     }
-  }
-
-  /**
-   * Retry a failed document processing job
-   */
-  private async retryDocument(data: any, envelope: any): Promise<void> {
-    const job: IDocumentProcessingJob = data.data;
-    const attempt = data.attempt || 1;
-    const maxAttempts = 3;
-
-    if (attempt > maxAttempts) {
-      logger.warn(`[DocumentProcessingQueue] Max retry attempts reached for: ${job.documentId}`);
-      return;
-    }
-
-    logger.info(`[DocumentProcessingQueue] Retrying document (attempt ${attempt}): ${job.documentId}`);
-
-    const delay = Math.pow(2, attempt) * 1000;
-    await new Promise(resolve => setTimeout(resolve, delay));
-
-    job.metadata = {
-      ...job.metadata,
-      attempt,
-      lastError: data.error,
-      retriedAt: new Date()
-    };
-
-    this.context.publish(`${this.channel}.process`, {
-      data: job,
-      timestamp: new Date()
-    });
   }
 
   /**
@@ -243,12 +253,14 @@ export class DocumentProcessingQueueHandler {
       if (allProcessed) {
         logger.info(`[DocumentProcessingQueue] All documents processed for verification: ${verificationId}`);
         
-        // Notify verification queue to proceed
-        this.context.publish('kyc.verification.documents_ready', {
-          verificationId,
-          documentCount: documents.length,
-          timestamp: new Date()
-        });
+        // Emit documents ready event
+        if (this.queueService) {
+          await this.queueService.emit('kyc-verification', 'documents_ready', {
+            verificationId,
+            documentCount: documents.length,
+            timestamp: new Date()
+          });
+        }
       }
     } catch (error) {
       logger.error('[DocumentProcessingQueue] Error checking verification documents:', error);
@@ -256,16 +268,17 @@ export class DocumentProcessingQueueHandler {
   }
 
   /**
-   * Determine if a job should be retried
+   * Get priority value for queue system
    */
-  private shouldRetry(job: IDocumentProcessingJob, error: any): boolean {
-    const attempt = job.metadata?.attempt || 0;
-    if (attempt >= 3) return false;
-
-    // Retry for temporary errors
-    return !error.message?.includes('Invalid') && !error.message?.includes('Not found');
+  private getPriorityValue(priority?: string): number {
+    const priorities: Record<string, number> = {
+      'critical': 1,
+      'high': 2,
+      'normal': 3,
+      'low': 4
+    };
+    return priorities[priority || 'normal'] || 3;
   }
 }
 
 export default DocumentProcessingQueueHandler;
-

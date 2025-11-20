@@ -1,11 +1,12 @@
 import Reactory from '@reactory/reactory-core';
 import logger from '@reactory/server-core/logging';
+import { QueueProvider } from '@reactory/server-modules/reactory-queue/services/queue/QueueProvider';
 
 /**
  * Verification Queue Handler
  * 
  * Handles asynchronous verification processing jobs.
- * Integrates with Reactory postal.js messaging system.
+ * Uses QueueProvider for flexible queue backend support (BullMQ, In-Memory, AWS SQS).
  */
 
 export interface IVerificationJob {
@@ -18,25 +19,67 @@ export interface IVerificationJob {
 
 export class VerificationQueueHandler {
   private context: Reactory.Server.IReactoryContext;
-  private channel: string = 'kyc.verification';
+  private queueProvider: QueueProvider;
+  private queueService: any;
+  private queueName: string = 'kyc-verification';
 
   constructor(context: Reactory.Server.IReactoryContext) {
     this.context = context;
-    this.setupSubscriptions();
+    this.initializeQueue();
   }
 
   /**
-   * Set up postal.js subscriptions for verification jobs
+   * Initialize queue provider and service
    */
-  private setupSubscriptions(): void {
-    // Subscribe to verification job requests
-    this.context.subscribe(`${this.channel}.process`, this.processVerification.bind(this));
-    this.context.subscribe(`${this.channel}.retry`, this.retryVerification.bind(this));
-    this.context.subscribe(`${this.channel}.cancel`, this.cancelVerification.bind(this));
+  private async initializeQueue(): Promise<void> {
+    try {
+      // Get QueueProvider service
+      this.queueProvider = this.context.getService('reactory.QueueProvider@1.0.0') as QueueProvider;
+      
+      if (!this.queueProvider) {
+        logger.warn('[VerificationQueue] QueueProvider not available, using fallback');
+        return;
+      }
 
-    logger.info('[VerificationQueue] Subscriptions established', {
-      channel: this.channel
-    });
+      // Get the default queue service (BullMQ, In-Memory, or AWS SQS)
+      this.queueService = this.queueProvider.getDefaultProvider();
+
+      if (this.queueService) {
+        await this.setupQueueProcessors();
+        logger.info('[VerificationQueue] Queue initialized successfully', {
+          queueName: this.queueName,
+          provider: this.queueProvider.getAvailableProviders()
+        });
+      }
+    } catch (error) {
+      logger.error('[VerificationQueue] Error initializing queue:', error);
+    }
+  }
+
+  /**
+   * Set up queue processors
+   */
+  private async setupQueueProcessors(): Promise<void> {
+    if (!this.queueService) return;
+
+    // Register processors for different job types
+    await this.queueService.addProcessor(
+      this.queueName,
+      'process',
+      this.processVerification.bind(this)
+    );
+
+    await this.queueService.addProcessor(
+      this.queueName,
+      'retry',
+      this.retryVerification.bind(this)
+    );
+
+    await this.queueService.addProcessor(
+      this.queueName,
+      'cancel',
+      this.cancelVerification.bind(this)
+    );
   }
 
   /**
@@ -50,12 +93,25 @@ export class VerificationQueueHandler {
         priority: job.priority || 'normal'
       });
 
-      // Publish to postal.js
-      this.context.publish(`${this.channel}.process`, {
-        data: job,
-        timestamp: new Date(),
-        priority: job.priority || 'normal'
-      });
+      if (this.queueService) {
+        // Use QueueProvider to add job
+        await this.queueService.addJob(this.queueName, {
+          type: 'process',
+          data: job,
+          options: {
+            priority: this.getPriorityValue(job.priority),
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 2000
+            }
+          }
+        });
+      } else {
+        // Fallback to direct processing
+        logger.warn('[VerificationQueue] Queue service not available, processing directly');
+        await this.processVerification({ data: job });
+      }
 
       // Log to audit
       const auditService: any = this.context.getService('reactory-kyc.KYCAuditService@1.0.0');
@@ -80,8 +136,8 @@ export class VerificationQueueHandler {
   /**
    * Process a verification job
    */
-  private async processVerification(data: any, envelope: any): Promise<void> {
-    const job: IVerificationJob = data.data;
+  private async processVerification(jobData: any): Promise<void> {
+    const job: IVerificationJob = jobData.data;
 
     try {
       logger.info(`[VerificationQueue] Processing verification: ${job.verificationId}`);
@@ -92,7 +148,7 @@ export class VerificationQueueHandler {
       await kycService.updateVerification(job.verificationId, {
         status: 'PROCESSING',
         metadata: {
-          queuedAt: data.timestamp,
+          queuedAt: new Date(),
           startedProcessing: new Date()
         }
       });
@@ -102,79 +158,57 @@ export class VerificationQueueHandler {
 
       logger.info(`[VerificationQueue] Verification processed successfully: ${job.verificationId}`);
 
-      // Publish completion event
-      this.context.publish(`${this.channel}.completed`, {
-        verificationId: job.verificationId,
-        success: true,
-        completedAt: new Date()
-      });
+      // Emit completion event
+      if (this.queueService) {
+        await this.queueService.emit(this.queueName, 'completed', {
+          verificationId: job.verificationId,
+          success: true,
+          completedAt: new Date()
+        });
+      }
 
     } catch (error) {
       logger.error(`[VerificationQueue] Error processing verification: ${job.verificationId}`, error);
 
-      // Publish failure event
-      this.context.publish(`${this.channel}.failed`, {
-        verificationId: job.verificationId,
-        error: error.message,
-        failedAt: new Date()
-      });
-
-      // Optionally retry
-      if (this.shouldRetry(job, error)) {
-        this.context.publish(`${this.channel}.retry`, {
-          data: job,
-          attempt: (job.metadata?.attempt || 0) + 1,
-          error: error.message
+      // Emit failure event
+      if (this.queueService) {
+        await this.queueService.emit(this.queueName, 'failed', {
+          verificationId: job.verificationId,
+          error: error.message,
+          failedAt: new Date()
         });
       }
+
+      throw error; // Re-throw to trigger retry logic
     }
   }
 
   /**
    * Retry a failed verification
    */
-  private async retryVerification(data: any, envelope: any): Promise<void> {
-    const job: IVerificationJob = data.data;
-    const attempt = data.attempt || 1;
-    const maxAttempts = 3;
-
-    if (attempt > maxAttempts) {
-      logger.warn(`[VerificationQueue] Max retry attempts reached for: ${job.verificationId}`);
-      
-      this.context.publish(`${this.channel}.max_retries_exceeded`, {
-        verificationId: job.verificationId,
-        attempts: attempt
-      });
-      
-      return;
-    }
+  private async retryVerification(jobData: any): Promise<void> {
+    const job: IVerificationJob = jobData.data;
+    const attempt = jobData.attempt || 1;
 
     logger.info(`[VerificationQueue] Retrying verification (attempt ${attempt}): ${job.verificationId}`);
-
-    // Wait before retrying (exponential backoff)
-    const delay = Math.pow(2, attempt) * 1000;
-    await new Promise(resolve => setTimeout(resolve, delay));
 
     // Update metadata with retry info
     job.metadata = {
       ...job.metadata,
       attempt,
-      lastError: data.error,
+      lastError: jobData.error,
       retriedAt: new Date()
     };
 
-    // Requeue
-    this.context.publish(`${this.channel}.process`, {
-      data: job,
-      timestamp: new Date()
-    });
+    // Process the job
+    await this.processVerification({ data: job });
   }
 
   /**
    * Cancel a verification job
    */
-  private async cancelVerification(data: any, envelope: any): Promise<void> {
-    const verificationId = data.verificationId;
+  private async cancelVerification(jobData: any): Promise<void> {
+    const verificationId = jobData.verificationId;
 
     try {
       logger.info(`[VerificationQueue] Cancelling verification: ${verificationId}`);
@@ -185,39 +219,52 @@ export class VerificationQueueHandler {
         status: 'CANCELLED',
         metadata: {
           cancelledAt: new Date(),
-          cancelReason: data.reason || 'User requested'
+          cancelReason: jobData.reason || 'User requested'
         }
       });
 
-      this.context.publish(`${this.channel}.cancelled`, {
-        verificationId,
-        cancelledAt: new Date()
-      });
+      if (this.queueService) {
+        await this.queueService.emit(this.queueName, 'cancelled', {
+          verificationId,
+          cancelledAt: new Date()
+        });
+      }
 
     } catch (error) {
       logger.error(`[VerificationQueue] Error cancelling verification: ${verificationId}`, error);
+      throw error;
     }
   }
 
   /**
-   * Determine if a job should be retried
+   * Get priority value for queue system
    */
-  private shouldRetry(job: IVerificationJob, error: any): boolean {
-    // Don't retry validation errors or user errors
-    if (error.message?.includes('Invalid') || error.message?.includes('Unauthorized')) {
-      return false;
+  private getPriorityValue(priority?: string): number {
+    const priorities: Record<string, number> = {
+      'critical': 1,
+      'high': 2,
+      'normal': 3,
+      'low': 4
+    };
+    return priorities[priority || 'normal'] || 3;
+  }
+
+  /**
+   * Get queue statistics
+   */
+  async getQueueStats(): Promise<any> {
+    if (!this.queueService) {
+      return { available: false };
     }
 
-    // Don't retry if already attempted multiple times
-    const attempt = job.metadata?.attempt || 0;
-    if (attempt >= 3) {
-      return false;
+    try {
+      const stats = await this.queueService.getStats(this.queueName);
+      return stats;
+    } catch (error) {
+      logger.error('[VerificationQueue] Error getting queue stats:', error);
+      return { error: error.message };
     }
-
-    // Retry for temporary errors (network, timeout, etc.)
-    return true;
   }
 }
 
 export default VerificationQueueHandler;
-

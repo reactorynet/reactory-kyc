@@ -1,11 +1,13 @@
 import Reactory from '@reactory/reactory-core';
 import logger from '@reactory/server-core/logging';
+import { QueueProvider } from '@reactory/server-modules/reactory-queue/services/queue/QueueProvider';
 
 /**
  * Webhook Queue Handler
  * 
  * Handles incoming webhooks from external providers (Trulio, Onfido).
  * Validates, processes, and updates verification status.
+ * Uses QueueProvider for flexible queue backend support.
  */
 
 export interface IWebhookJob {
@@ -20,23 +22,49 @@ export interface IWebhookJob {
 
 export class WebhookQueueHandler {
   private context: Reactory.Server.IReactoryContext;
-  private channel: string = 'kyc.webhook';
+  private queueProvider: QueueProvider;
+  private queueService: any;
+  private queueName: string = 'kyc-webhook';
 
   constructor(context: Reactory.Server.IReactoryContext) {
     this.context = context;
-    this.setupSubscriptions();
+    this.initializeQueue();
   }
 
   /**
-   * Set up postal.js subscriptions
+   * Initialize queue provider and service
    */
-  private setupSubscriptions(): void {
-    this.context.subscribe(`${this.channel}.process`, this.processWebhook.bind(this));
-    this.context.subscribe(`${this.channel}.retry`, this.retryWebhook.bind(this));
+  private async initializeQueue(): Promise<void> {
+    try {
+      this.queueProvider = this.context.getService('reactory.QueueProvider@1.0.0') as QueueProvider;
+      
+      if (!this.queueProvider) {
+        logger.warn('[WebhookQueue] QueueProvider not available');
+        return;
+      }
 
-    logger.info('[WebhookQueue] Subscriptions established', {
-      channel: this.channel
-    });
+      this.queueService = this.queueProvider.getDefaultProvider();
+
+      if (this.queueService) {
+        await this.setupQueueProcessors();
+        logger.info('[WebhookQueue] Queue initialized successfully');
+      }
+    } catch (error) {
+      logger.error('[WebhookQueue] Error initializing queue:', error);
+    }
+  }
+
+  /**
+   * Set up queue processors
+   */
+  private async setupQueueProcessors(): Promise<void> {
+    if (!this.queueService) return;
+
+    await this.queueService.addProcessor(
+      this.queueName,
+      'process',
+      this.processWebhook.bind(this)
+    );
   }
 
   /**
@@ -50,10 +78,22 @@ export class WebhookQueueHandler {
         timestamp: job.timestamp
       });
 
-      this.context.publish(`${this.channel}.process`, {
-        data: job,
-        timestamp: new Date()
-      });
+      if (this.queueService) {
+        await this.queueService.addJob(this.queueName, {
+          type: 'process',
+          data: job,
+          options: {
+            priority: 1, // High priority for webhooks
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 2000
+            }
+          }
+        });
+      } else {
+        await this.processWebhook({ data: job });
+      }
 
       // Log to audit
       const auditService: any = this.context.getService('reactory-kyc.KYCAuditService@1.0.0');
@@ -74,8 +114,8 @@ export class WebhookQueueHandler {
   /**
    * Process a webhook
    */
-  private async processWebhook(data: any, envelope: any): Promise<void> {
-    const job: IWebhookJob = data.data;
+  private async processWebhook(jobData: any): Promise<void> {
+    const job: IWebhookJob = jobData.data;
 
     try {
       logger.info(`[WebhookQueue] Processing webhook from: ${job.providerId}`);
@@ -99,30 +139,28 @@ export class WebhookQueueHandler {
 
       logger.info(`[WebhookQueue] Webhook processed successfully from: ${job.providerId}`);
 
-      this.context.publish(`${this.channel}.processed`, {
-        providerId: job.providerId,
-        webhookId: job.webhookId,
-        success: true,
-        processedAt: new Date()
-      });
+      if (this.queueService) {
+        await this.queueService.emit(this.queueName, 'processed', {
+          providerId: job.providerId,
+          webhookId: job.webhookId,
+          success: true,
+          processedAt: new Date()
+        });
+      }
 
     } catch (error) {
       logger.error(`[WebhookQueue] Error processing webhook from: ${job.providerId}`, error);
 
-      this.context.publish(`${this.channel}.failed`, {
-        providerId: job.providerId,
-        webhookId: job.webhookId,
-        error: error.message,
-        failedAt: new Date()
-      });
-
-      if (this.shouldRetry(job, error)) {
-        this.context.publish(`${this.channel}.retry`, {
-          data: job,
-          attempt: (job.metadata?.attempt || 0) + 1,
-          error: error.message
+      if (this.queueService) {
+        await this.queueService.emit(this.queueName, 'failed', {
+          providerId: job.providerId,
+          webhookId: job.webhookId,
+          error: error.message,
+          failedAt: new Date()
         });
       }
+
+      throw error;
     }
   }
 
@@ -273,63 +311,17 @@ export class WebhookQueueHandler {
    * Trigger follow-up actions based on webhook
    */
   private async triggerFollowUpActions(webhookData: any): Promise<void> {
-    // If verification is complete, trigger notifications
+    // If verification is complete, emit notification event
     if (webhookData.status === 'complete' || webhookData.status === 'completed') {
-      this.context.publish('kyc.notification.verification_complete', {
-        verificationId: webhookData.verificationId,
-        result: webhookData.result,
-        timestamp: new Date()
-      });
+      if (this.queueService) {
+        await this.queueService.emit('kyc-notification', 'verification_complete', {
+          verificationId: webhookData.verificationId,
+          result: webhookData.result,
+          timestamp: new Date()
+        });
+      }
     }
-  }
-
-  /**
-   * Retry a failed webhook processing
-   */
-  private async retryWebhook(data: any, envelope: any): Promise<void> {
-    const job: IWebhookJob = data.data;
-    const attempt = data.attempt || 1;
-    const maxAttempts = 3;
-
-    if (attempt > maxAttempts) {
-      logger.warn(`[WebhookQueue] Max retry attempts reached for webhook: ${job.webhookId}`);
-      return;
-    }
-
-    logger.info(`[WebhookQueue] Retrying webhook (attempt ${attempt}): ${job.webhookId}`);
-
-    const delay = Math.pow(2, attempt) * 1000;
-    await new Promise(resolve => setTimeout(resolve, delay));
-
-    job.metadata = {
-      ...job.metadata,
-      attempt,
-      lastError: data.error,
-      retriedAt: new Date()
-    };
-
-    this.context.publish(`${this.channel}.process`, {
-      data: job,
-      timestamp: new Date()
-    });
-  }
-
-  /**
-   * Determine if a webhook should be retried
-   */
-  private shouldRetry(job: IWebhookJob, error: any): boolean {
-    // Don't retry signature validation failures
-    if (error.message?.includes('Invalid') && error.message?.includes('signature')) {
-      return false;
-    }
-
-    const attempt = job.metadata?.attempt || 0;
-    if (attempt >= 3) return false;
-
-    // Retry for temporary errors
-    return true;
   }
 }
 
 export default WebhookQueueHandler;
-
