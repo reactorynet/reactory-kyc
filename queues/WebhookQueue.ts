@@ -172,13 +172,13 @@ export class WebhookQueueHandler {
       logger.info(`[WebhookQueue] Verifying signature for provider: ${job.providerId}`);
 
       // Get provider-specific verification utility
-      const { verifyWebhookSignature } = await import('../providers/utils/webhookVerification');
+      const webhookUtils = await import('../providers/utils/webhookVerification');
 
-      const isValid = verifyWebhookSignature(
-        job.payload,
+      const isValid = webhookUtils.verifyHmacSignature(
+        JSON.stringify(job.payload),
         job.signature || job.headers['x-signature'] || '',
         process.env[`${job.providerId.toUpperCase()}_WEBHOOK_SECRET`] || '',
-        job.providerId
+        { algorithm: 'sha256', encoding: 'hex' }
       );
 
       if (!isValid) {
