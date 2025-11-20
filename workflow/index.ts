@@ -10,7 +10,7 @@ import AutomatedVerificationWorkflow from '../workflows/AutomatedVerificationWor
 import HybridVerificationWorkflow from '../workflows/HybridVerificationWorkflow';
 import DocumentVerificationWorkflow from '../workflows/DocumentVerificationWorkflow';
 
-const workflows: Reactory.Server.IReactoryWorkflowDefinition[] = [
+const workflows: Reactory.Workflow.IWorkflow[] = [
   ManualVerificationWorkflow,
   AutomatedVerificationWorkflow,
   HybridVerificationWorkflow,
