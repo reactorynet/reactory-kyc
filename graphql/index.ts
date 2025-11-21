@@ -5,22 +5,14 @@
  */
 
 import Reactory from '@reactory/reactory-core';
-import path from 'path';
-import Resolvers from './resolvers';
-
-// GraphQL schemas will be loaded from the schema directory
-const schemas: string[] = [
-  // Schema files will be loaded here
-  // path.join(__dirname, 'schema', 'kyc.graphql'),
-  // path.join(__dirname, 'schema', 'verification.graphql'),
-  // path.join(__dirname, 'schema', 'document.graphql'),
-];
+import TypeDefs from '../graph/types';
+import Resolvers from '../graph/resolvers';
 
 const GraphqlDefinitions: Reactory.Graph.IReactoryGraphDefinition = {
   name: 'reactory-kyc',
   version: '1.0.0',
   nameSpace: 'reactory',
-  typeDefs: schemas,
+  typeDefs: TypeDefs,
   resolvers: Resolvers,
   directives: []
 };

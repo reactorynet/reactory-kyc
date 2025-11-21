@@ -1,0 +1,329 @@
+# KYC Verification Types
+type KYCVerification {
+  id: ID!
+  userId: String!
+  status: VerificationStatus!
+  level: VerificationLevel!
+  workflow: WorkflowType!
+  providerId: String
+  providerVerificationId: String
+  documents: [KYCDocument!]!
+  riskScore: KYCRiskScore
+  metadata: JSON
+  notes: [VerificationNote!]!
+  statusHistory: [StatusHistoryEntry!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  completedAt: DateTime
+  expiresAt: DateTime
+}
+
+type KYCDocument {
+  id: ID!
+  verificationId: String!
+  userId: String!
+  type: DocumentType!
+  fileId: String!
+  fileName: String!
+  fileSize: Int!
+  mimeType: String!
+  hash: String!
+  status: DocumentStatus!
+  validationErrors: [String!]
+  extractedData: JSON
+  expiryDate: DateTime
+  issuingCountry: String
+  documentNumber: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type KYCRiskScore {
+  id: ID!
+  verificationId: String!
+  score: Int!
+  level: RiskLevel!
+  factors: [RiskFactor!]!
+  calculatedAt: DateTime!
+  calculatedBy: String!
+  notes: String
+}
+
+type RiskFactor {
+  name: String!
+  value: Float!
+  weight: Float!
+  description: String
+}
+
+type VerificationNote {
+  author: String!
+  content: String!
+  timestamp: DateTime!
+  isInternal: Boolean!
+}
+
+type StatusHistoryEntry {
+  status: VerificationStatus!
+  timestamp: DateTime!
+  changedBy: String!
+  reason: String
+}
+
+type KYCProvider {
+  id: ID!
+  name: String!
+  type: ProviderType!
+  enabled: Boolean!
+  priority: Int!
+  capabilities: [String!]!
+  configuration: JSON
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# Enums
+enum VerificationStatus {
+  PENDING
+  IN_PROGRESS
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum VerificationLevel {
+  BASIC
+  STANDARD
+  ENHANCED
+  FULL
+}
+
+enum WorkflowType {
+  MANUAL
+  AUTOMATED
+  HYBRID
+  DOCUMENT_ONLY
+}
+
+enum DocumentType {
+  PASSPORT
+  DRIVERS_LICENSE
+  NATIONAL_ID
+  RESIDENCE_PERMIT
+  BIRTH_CERTIFICATE
+  UTILITY_BILL
+  BANK_STATEMENT
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  VALIDATED
+  REJECTED
+  EXPIRED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ProviderType {
+  TRULIO
+  ONFIDO
+  INTERNAL
+}
+
+# Input Types
+input InitiateVerificationInput {
+  userId: String!
+  level: VerificationLevel!
+  workflow: WorkflowType
+  metadata: JSON
+}
+
+input UploadDocumentInput {
+  verificationId: String!
+  type: DocumentType!
+  file: Upload!
+  metadata: JSON
+}
+
+input UpdateVerificationInput {
+  verificationId: String!
+  status: VerificationStatus
+  notes: String
+  metadata: JSON
+}
+
+input ApproveVerificationInput {
+  verificationId: String!
+  notes: String
+}
+
+input RejectVerificationInput {
+  verificationId: String!
+  reason: String!
+  notes: String
+}
+
+input RequestAdditionalInfoInput {
+  verificationId: String!
+  requestedDocuments: [DocumentType!]
+  message: String!
+}
+
+input VerificationFilterInput {
+  userId: String
+  status: [VerificationStatus!]
+  level: [VerificationLevel!]
+  workflow: [WorkflowType!]
+  createdAfter: DateTime
+  createdBefore: DateTime
+  expiresAfter: DateTime
+  expiresBefore: DateTime
+}
+
+input DocumentFilterInput {
+  verificationId: String
+  userId: String
+  type: [DocumentType!]
+  status: [DocumentStatus!]
+  createdAfter: DateTime
+  createdBefore: DateTime
+}
+
+input ReportInput {
+  startDate: DateTime!
+  endDate: DateTime!
+  format: ReportFormat
+  filters: JSON
+}
+
+enum ReportFormat {
+  JSON
+  CSV
+  PDF
+}
+
+# Response Types
+type VerificationResponse {
+  success: Boolean!
+  message: String
+  verification: KYCVerification
+  errors: [String!]
+}
+
+type DocumentResponse {
+  success: Boolean!
+  message: String
+  document: KYCDocument
+  errors: [String!]
+}
+
+type RiskAssessmentResponse {
+  success: Boolean!
+  message: String
+  riskScore: KYCRiskScore
+  errors: [String!]
+}
+
+type VerificationListResponse {
+  success: Boolean!
+  data: [KYCVerification!]!
+  total: Int!
+  page: Int!
+  pageSize: Int!
+}
+
+type DocumentListResponse {
+  success: Boolean!
+  data: [KYCDocument!]!
+  total: Int!
+  page: Int!
+  pageSize: Int!
+}
+
+type VerificationReport {
+  reportId: String!
+  format: ReportFormat!
+  data: JSON!
+  generatedAt: DateTime!
+  generatedBy: String!
+  fileUrl: String
+}
+
+type VerificationStatistics {
+  total: Int!
+  byStatus: JSON!
+  byLevel: JSON!
+  byWorkflow: JSON!
+  byRiskLevel: JSON!
+  averageProcessingTime: Float!
+  approvalRate: Float!
+  rejectionRate: Float!
+}
+
+# Queries
+type Query {
+  # Verification Queries
+  kycVerification(id: ID!): KYCVerification
+  kycVerifications(filter: VerificationFilterInput, page: Int, pageSize: Int): VerificationListResponse!
+  kycVerificationHistory(userId: String!): [KYCVerification!]!
+  kycVerificationStatistics(startDate: DateTime, endDate: DateTime): VerificationStatistics!
+  
+  # Document Queries
+  kycDocument(id: ID!): KYCDocument
+  kycDocuments(filter: DocumentFilterInput, page: Int, pageSize: Int): DocumentListResponse!
+  kycDocumentsByVerification(verificationId: String!): [KYCDocument!]!
+  
+  # Risk Assessment Queries
+  kycRiskScore(verificationId: String!): KYCRiskScore
+  
+  # Provider Queries
+  kycProviders: [KYCProvider!]!
+  kycProvider(id: ID!): KYCProvider
+  kycProviderHealth: JSON!
+  
+  # Reporting Queries
+  kycVerificationReport(input: ReportInput!): VerificationReport!
+  kycRiskReport(input: ReportInput!): VerificationReport!
+  kycComplianceReport(input: ReportInput!): VerificationReport!
+}
+
+# Mutations
+type Mutation {
+  # Verification Mutations
+  initiateKYCVerification(input: InitiateVerificationInput!): VerificationResponse!
+  updateKYCVerification(input: UpdateVerificationInput!): VerificationResponse!
+  approveKYCVerification(input: ApproveVerificationInput!): VerificationResponse!
+  rejectKYCVerification(input: RejectVerificationInput!): VerificationResponse!
+  requestAdditionalKYCInfo(input: RequestAdditionalInfoInput!): VerificationResponse!
+  cancelKYCVerification(verificationId: String!): VerificationResponse!
+  
+  # Document Mutations
+  uploadKYCDocument(input: UploadDocumentInput!): DocumentResponse!
+  deleteKYCDocument(documentId: String!): DocumentResponse!
+  validateKYCDocument(documentId: String!): DocumentResponse!
+  
+  # Risk Assessment Mutations
+  calculateRiskScore(verificationId: String!): RiskAssessmentResponse!
+  updateRiskScore(verificationId: String!, score: Int!, notes: String): RiskAssessmentResponse!
+}
+
+# Subscriptions (for real-time updates)
+type Subscription {
+  kycVerificationUpdated(verificationId: String!): KYCVerification!
+  kycDocumentProcessed(verificationId: String!): KYCDocument!
+  kycRiskScoreCalculated(verificationId: String!): KYCRiskScore!
+}
+
+# Scalar Types
+scalar DateTime
+scalar JSON
+scalar Upload
+
