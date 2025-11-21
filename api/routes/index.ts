@@ -8,7 +8,7 @@ import { createWebhookRoutes } from './webhook.routes';
  * Main KYC API Router
  * Combines all KYC REST API routes
  */
-export const createKYCRouter = (context: Reactory.Server.IReactoryContext) => {
+export const createKYCRouter = () => {
   const router = express.Router();
 
   // Health check endpoint
@@ -22,9 +22,9 @@ export const createKYCRouter = (context: Reactory.Server.IReactoryContext) => {
   });
 
   // Mount sub-routers
-  router.use('/verification', createVerificationRoutes(context));
-  router.use('/document', createDocumentRoutes(context));
-  router.use('/webhook', createWebhookRoutes(context));
+  router.use('/verification', createVerificationRoutes());
+  router.use('/document', createDocumentRoutes());
+  router.use('/webhook', createWebhookRoutes());
 
   return router;
 };

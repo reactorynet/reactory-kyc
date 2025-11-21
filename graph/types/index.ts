@@ -1,4 +1,4 @@
-import { loadGraphQLTypeDefinitions } from '@reactory/server-core/utils/graphql';
+import { loadGraphQLTypeDefinitions } from '@reactory/server-core/graph/graphql-loader';
 import path from 'path';
 
 const typeDefs = loadGraphQLTypeDefinitions([

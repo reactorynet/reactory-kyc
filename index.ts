@@ -6,7 +6,7 @@ import Models from './models';
 import Forms from './forms';
 import Middlewares from './middleware';
 import CliCommands from './cli';
-import KYCApiDefinition from './api';
+import { KYCApiDefinition } from './api';
 
 /**
  * Reactory KYC Module
@@ -31,7 +31,7 @@ const ReactoryKYCModule: Reactory.Server.IReactoryModule = {
   models: Models,
   middleware: Middlewares,
   cli: CliCommands,
-  routes: [KYCApiDefinition],
+  routes: KYCApiDefinition,
   translations: [
     // Will be populated as we add i18n files
   ],

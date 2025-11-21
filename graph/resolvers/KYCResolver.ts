@@ -6,7 +6,7 @@ import {
   IKYCDocumentService,
   IRiskAssessmentService,
   IReportingService
-} from '../../types';
+} from '../../types/kyc.types';
 
 /**
  * Helper function to get KYC Service
