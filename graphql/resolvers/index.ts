@@ -1,17 +1,7 @@
-/**
- * KYC GraphQL Resolvers
- * 
- * Export all GraphQL resolvers
- */
+import { mergeGraphResolver } from '@reactory/server-core/utils';
+import KYCResolver from './KYCResolver';
 
-// Resolvers will be imported here as they are implemented
-// import KYCResolver from './KYCResolver';
-// import DocumentResolver from './DocumentResolver';
-
-export default {
-  // Resolvers will be added here
-  Query: {},
-  Mutation: {},
-  Subscription: {}
-};
+export default mergeGraphResolver([
+  KYCResolver
+]);
 

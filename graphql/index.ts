@@ -1,17 +1,9 @@
-/**
- * KYC GraphQL Definitions
- * 
- * Export all GraphQL schemas and resolvers
- */
+import resolvers from './resolvers';
+import types from './types';
 
-import Reactory from '@reactory/reactory-core';
-import TypeDefs from '../graph/types';
-import Resolvers from '../graph/resolvers';
-
-const GraphqlDefinitions: Reactory.Graph.IGraphDefinitions = {
-  Types: TypeDefs,
-  Resolvers: Resolvers,
+export const KYCGraphqlDefinitions: Reactory.Graph.IGraphDefinitions = {
+  Types: types,
+  Resolvers: resolvers,
 };
 
-export default GraphqlDefinitions;
-
+export default KYCGraphqlDefinitions;
