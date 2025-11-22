@@ -153,23 +153,17 @@ const DocumentUploadForm: Reactory.Forms.IReactoryForm = {
   registerAsComponent: true,
   graphql: {
     mutation: {
-      name: 'uploadKYCDocument',
-      text: `
-        mutation UploadKYCDocument($input: UploadDocumentInput!) {
-          uploadKYCDocument(input: $input) {
-            success
-            message
-            document {
-              id
-              type
-              fileName
-              status
-              createdAt
+      upload: {
+        name: 'uploadKYCDocument',
+        text: `
+          mutation UploadKYCDocument($input: UploadDocumentInput!) {
+            uploadKYCDocument(input: $input) {
+              success
+              message
             }
-            errors
           }
-        }
-      `,
+        `,
+      }      
     },
   },
 };

@@ -346,23 +346,25 @@ const ManualReviewForm: Reactory.Forms.IReactoryForm = {
       `,
     },
     mutation: {
-      name: 'reviewKYCVerification',
-      text: `
-        mutation ReviewKYCVerification($verificationId: String!, $action: String!, $notes: String, $reason: String) {
-          updateKYCVerification(input: {
-            verificationId: $verificationId
-            notes: $notes
-          }) {
-            success
-            message
-            verification {
-              id
-              status
-            }
-            errors
-          }
-        }
-      `,
+      review: {
+       name: 'reviewKYCVerification',
+       text: `
+         mutation ReviewKYCVerification($verificationId: String!, $action: String!, $notes: String, $reason: String) {
+           updateKYCVerification(input: {
+             verificationId: $verificationId
+             notes: $notes
+           }) {
+             success
+             message
+             verification {
+               id
+               status
+             }
+             errors
+           }
+         }
+       `,
+      }      
     },
   },
 };
