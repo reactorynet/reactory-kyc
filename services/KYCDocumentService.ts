@@ -8,6 +8,7 @@ import ApiError from '@reactory/server-core/exceptions';
 import logger from '@reactory/server-core/logging';
 import { KYCDocument, IKYCDocumentDocument } from '../models/KYCDocument';
 import { KYCVerification, IKYCVerificationDocument } from '../models/KYCVerification';
+import ReactoryAuditService from 'modules/reactory-core/services/ReactoryAuditService';
 
 /**
  * KYC Document Service
@@ -33,9 +34,17 @@ class KYCDocumentService implements Reactory.Service.IReactoryService {
   nameSpace: string = 'reactory-kyc';
   version: string = '1.0.0';
   context: Reactory.Server.IReactoryContext;
-
+  
   constructor(props: Reactory.Service.IReactoryServiceProps, context: Reactory.Server.IReactoryContext) {
     this.context = context;
+  }
+
+  public setFileService(fileService: Reactory.Service.IReactoryFileService) {
+    // Placeholder for dependency injection if needed    
+  }
+
+  public setAuditService(auditService: ReactoryAuditService) {
+    // Placeholder for dependency injection if needed
   }
 
   /**
