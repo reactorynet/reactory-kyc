@@ -1,0 +1,69 @@
+{
+  "documentTypes": [
+    {
+      "id": "PASSPORT",
+      "name": "Passport",
+      "description": "International travel document",
+      "requiredFields": ["documentNumber", "issuingCountry", "issueDate", "expiryDate"],
+      "validityCheck": true,
+      "ocrSupported": true
+    },
+    {
+      "id": "NATIONAL_ID",
+      "name": "National ID Card",
+      "description": "Government-issued identification card",
+      "requiredFields": ["documentNumber", "issuingCountry", "issueDate", "expiryDate"],
+      "validityCheck": true,
+      "ocrSupported": true
+    },
+    {
+      "id": "DRIVERS_LICENSE",
+      "name": "Driver's License",
+      "description": "Government-issued driver's license",
+      "requiredFields": ["documentNumber", "issuingCountry", "issueDate", "expiryDate"],
+      "validityCheck": true,
+      "ocrSupported": true
+    },
+    {
+      "id": "PROOF_OF_ADDRESS",
+      "name": "Proof of Address",
+      "description": "Document showing residential address",
+      "requiredFields": ["issueDate"],
+      "validityCheck": false,
+      "ocrSupported": true
+    },
+    {
+      "id": "BANK_STATEMENT",
+      "name": "Bank Statement",
+      "description": "Official bank statement",
+      "requiredFields": ["issueDate"],
+      "validityCheck": false,
+      "ocrSupported": true
+    },
+    {
+      "id": "UTILITY_BILL",
+      "name": "Utility Bill",
+      "description": "Utility service bill",
+      "requiredFields": ["issueDate"],
+      "validityCheck": false,
+      "ocrSupported": true
+    },
+    {
+      "id": "SELFIE",
+      "name": "Selfie Photo",
+      "description": "Photo of face for identity matching",
+      "requiredFields": [],
+      "validityCheck": false,
+      "ocrSupported": false
+    },
+    {
+      "id": "LIVENESS_VIDEO",
+      "name": "Liveness Video",
+      "description": "Video for liveness detection",
+      "requiredFields": [],
+      "validityCheck": false,
+      "ocrSupported": false
+    }
+  ]
+}
+
