@@ -4,7 +4,7 @@
  * Form for KYC reviewers to assess and make decisions on verification requests
  */
 
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 const ManualReviewForm: Reactory.Forms.IReactoryForm = {
   id: 'reactory-kyc.ManualReviewForm@1.0.0',

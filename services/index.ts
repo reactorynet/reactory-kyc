@@ -4,7 +4,7 @@
  * Export all KYC services
  */
 
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { KYCDocumentServiceDefinition } from './KYCDocumentService';
 import { RiskAssessmentServiceDefinition } from './RiskAssessmentService';
 import { KYCAuditServiceDefinition } from './KYCAuditService';

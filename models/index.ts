@@ -4,7 +4,7 @@
  * Export all KYC data models (MongoDB/Mongoose)
  */
 
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import KYCVerification from './KYCVerification';
 import KYCDocument from './KYCDocument';
 import KYCRiskScore from './KYCRiskScore';

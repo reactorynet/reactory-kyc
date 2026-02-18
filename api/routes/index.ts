@@ -1,5 +1,5 @@
 import express from 'express';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { createVerificationRoutes } from './verification.routes';
 import { createDocumentRoutes } from './document.routes';
 import { createWebhookRoutes } from './webhook.routes';

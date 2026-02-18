@@ -1,4 +1,4 @@
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import logger from '@reactory/server-core/logging';
 import {
   WorkflowBase,
@@ -332,7 +332,7 @@ class ManualVerificationWorkflowImpl implements WorkflowBase<ManualWorkflowData>
 export const ManualVerificationWorkflow: Reactory.Workflow.IWorkflow = {
   id: 'reactory-kyc.ManualVerificationWorkflow@1.0.0',
   nameSpace: 'reactory-kyc',
-  name: 'Manual Verification Workflow',
+  name: 'ManualVerificationWorkflow',
   component: ManualVerificationWorkflowImpl,
   category: 'workflow',
   autoStart: false,

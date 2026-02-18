@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction, request } from 'express';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { IKYCService } from '../../types';
 
 /**

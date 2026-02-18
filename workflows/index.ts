@@ -4,7 +4,7 @@
  * Export all KYC workflow definitions
  */
 
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import ManualVerificationWorkflow from './ManualVerificationWorkflow';
 import AutomatedVerificationWorkflow from './AutomatedVerificationWorkflow';
 import HybridVerificationWorkflow from './HybridVerificationWorkflow';

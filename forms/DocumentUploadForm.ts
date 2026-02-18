@@ -4,7 +4,7 @@
  * Form for uploading KYC verification documents
  */
 
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 const DocumentUploadForm: Reactory.Forms.IReactoryForm = {
   id: 'reactory-kyc.DocumentUploadForm@1.0.0',

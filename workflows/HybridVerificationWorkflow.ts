@@ -1,4 +1,4 @@
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import logger from '@reactory/server-core/logging';
 import {
   WorkflowBase,
@@ -267,7 +267,7 @@ class HybridVerificationWorkflowImpl implements WorkflowBase<HybridWorkflowData>
 export const HybridVerificationWorkflow: Reactory.Workflow.IWorkflow = {
   id: 'reactory-kyc.HybridVerificationWorkflow@1.0.0',
   nameSpace: 'reactory-kyc',
-  name: 'Hybrid Verification Workflow',
+  name: 'HybridVerificationWorkflow',
   component: HybridVerificationWorkflowImpl,
   category: 'workflow',
   autoStart: false,

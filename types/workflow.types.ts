@@ -3,7 +3,7 @@
  */
 
 import { VerificationStatus, WorkflowType, IKYCVerification } from './kyc.types';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 /**
  * Workflow Context

@@ -1,4 +1,4 @@
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { ObjectId } from 'mongodb';
 import { service } from '@reactory/server-core/application/decorators/service';
 import { roles } from '@reactory/server-core/authentication/decorators';

@@ -4,7 +4,7 @@
  * Form for users to initiate KYC verification and provide personal information
  */
 
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 
 const UserVerificationForm: Reactory.Forms.IReactoryForm = {
   id: 'reactory-kyc.UserVerificationForm@1.0.0',

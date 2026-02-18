@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import { IKYCDocumentService } from '../../types';
 import multer from 'multer';
 

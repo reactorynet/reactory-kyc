@@ -5,7 +5,7 @@
  * Integrates with Reactory postal.js messaging system.
  */
 
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import VerificationQueueHandler from './VerificationQueue';
 import DocumentProcessingQueueHandler from './DocumentProcessingQueue';
 import NotificationQueueHandler from './NotificationQueue';

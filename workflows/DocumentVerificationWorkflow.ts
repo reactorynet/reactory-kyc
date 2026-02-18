@@ -1,4 +1,4 @@
-import Reactory from '@reactory/reactory-core';
+import Reactory from '@reactorynet/reactory-core';
 import logger from '@reactory/server-core/logging';
 import {
   WorkflowBase,
@@ -386,7 +386,7 @@ class DocumentVerificationWorkflowImpl implements WorkflowBase<DocumentWorkflowD
 export const DocumentVerificationWorkflow: Reactory.Workflow.IWorkflow = {
   id: 'reactory-kyc.DocumentVerificationWorkflow@1.0.0',
   nameSpace: 'reactory-kyc',
-  name: 'Document Verification Workflow',
+  name: 'DocumentVerificationWorkflow',
   component: DocumentVerificationWorkflowImpl,
   category: 'workflow',
   autoStart: false,
