@@ -1,5 +1,6 @@
 import Reactory from '@reactorynet/reactory-core';
 import logger from '@reactory/server-core/logging';
+import ReactoryContextProvider from '@reactory/server-core/context/ReactoryContextProvider';
 import {
   WorkflowBase,
   StepBody,
@@ -31,6 +32,26 @@ class HybridWorkflowData {
 abstract class HybridWorkflowStep extends StepBody {
   public context: Reactory.Server.IReactoryContext;
   public data: HybridWorkflowData;
+
+  /**
+   * Initialize the Reactory context and services for this step.
+   * If a context is already provided (e.g. by the workflow engine), it will be reused.
+   */
+  async initializeServices(): Promise<void> {
+    if (!this.context) {
+      const ctx: any = await ReactoryContextProvider(null, null);
+      await ctx.forUser(process.env.KYC_SYSTEM_USER || 'kyc@reactory.net');
+      await ctx.forPartner(process.env.KYC_SYSTEM_PARTNER || 'reactory');
+      this.context = ctx;
+      if (!this.context.user) {
+        throw new Error('Failed to initialize workflow context: user not found');
+      }
+    }
+  }
+
+  protected logError(message: string, error: any, step: string): void {
+    this.context.error(message, { error: error.message, stack: error.stack }, step);
+  }
 }
 
 /**
@@ -39,6 +60,7 @@ abstract class HybridWorkflowStep extends StepBody {
 class InitializeVerification extends HybridWorkflowStep {
   async run(stepContext: StepExecutionContext): Promise<ExecutionResult> {
     try {
+      await this.initializeServices();
       logger.info(`[HybridWorkflow] Initializing verification: ${this.data.verificationId}`);
 
       const kycService = this.context.getService('reactory-kyc.KYCService@1.0.0');
