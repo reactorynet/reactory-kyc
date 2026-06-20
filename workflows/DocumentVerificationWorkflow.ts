@@ -6,7 +6,7 @@ import {
   StepBody,
   StepExecutionContext,
   ExecutionResult,
-} from 'workflow-es';
+} from '@reactorynet/workflow-es';
 
 /**
  * Document Verification Workflow
