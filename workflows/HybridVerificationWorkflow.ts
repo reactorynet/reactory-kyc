@@ -247,7 +247,7 @@ async function calculateComplexity(
  */
 class HybridVerificationWorkflowImpl implements WorkflowBase<HybridWorkflowData> {
   id: string = 'reactory-kyc.HybridVerificationWorkflow@1.0.0';
-  version: number = 1;
+  version: string = '1.0.0';
 
   public build(builder: any) {
     builder

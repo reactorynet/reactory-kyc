@@ -291,7 +291,7 @@ function getRequiredDocuments(level: string): string[] {
  */
 class ManualVerificationWorkflowImpl implements WorkflowBase<ManualWorkflowData> {
   id: string = 'reactory-kyc.ManualVerificationWorkflow@1.0.0';
-  version: number = 1;
+  version: string = '1.0.0';
 
   public build(builder: any) {
     builder
