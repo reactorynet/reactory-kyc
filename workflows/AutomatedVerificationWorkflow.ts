@@ -263,7 +263,7 @@ async function selectBestProvider(
  */
 class AutomatedVerificationWorkflowImpl implements WorkflowBase<AutomatedWorkflowData> {
   id: string = 'reactory-kyc.AutomatedVerificationWorkflow@1.0.0';
-  version: number = 1;
+  version: string = '1.0.0';
 
   public build(builder: any) {
     builder

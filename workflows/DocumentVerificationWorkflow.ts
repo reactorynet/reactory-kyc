@@ -345,7 +345,7 @@ async function performFraudDetection(
  */
 class DocumentVerificationWorkflowImpl implements WorkflowBase<DocumentWorkflowData> {
   id: string = 'reactory-kyc.DocumentVerificationWorkflow@1.0.0';
-  version: number = 1;
+  version: string = '1.0.0';
 
   public build(builder: any) {
     builder
