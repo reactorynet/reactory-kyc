@@ -8,7 +8,7 @@ import ApiError from '@reactory/server-core/exceptions';
 import logger from '@reactory/server-core/logging';
 import { KYCDocument, IKYCDocumentDocument } from '../models/KYCDocument';
 import { KYCVerification, IKYCVerificationDocument } from '../models/KYCVerification';
-import ReactoryAuditService from 'modules/reactory-core/services/ReactoryAuditService';
+import ReactoryAuditService from '@reactory/server-modules/reactory-core/services/ReactoryAuditService';
 
 /**
  * KYC Document Service
