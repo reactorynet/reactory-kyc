@@ -61,11 +61,25 @@ class RiskAssessmentService implements Reactory.Service.IReactoryService {
     this.context = context;
   }
 
+  /** Instance assigned by the ServiceManager via the `auditService` dependency alias. */
+  private _auditService: any;
+
   /**
-   * Get the ReactoryAuditService instance
+   * Get the ReactoryAuditService instance.
+   *
+   * The service definition declares `auditService` as a dependency alias, so the
+   * ServiceManager assigns this property after construction. A getter-only
+   * accessor therefore threw "Cannot set property auditService of #<RiskAssessmentService>
+   * which has only a getter" during initialisation, which failed the whole service.
+   * The setter stores the injected instance; the getter still resolves the
+   * service from context as a fallback when nothing was injected.
    */
   private get auditService(): any {
-    return this.context.getService('core.ReactoryAuditService@1.0.0');
+    return this._auditService ?? this.context.getService('core.ReactoryAuditService@1.0.0');
+  }
+
+  private set auditService(service: any) {
+    this._auditService = service;
   }
 
   /**
