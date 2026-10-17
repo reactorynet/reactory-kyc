@@ -36,11 +36,25 @@ class ReportingService implements Reactory.Service.IReactoryService {
     this.context = context;
   }
 
+  /** Instance assigned by the ServiceManager via the `auditService` dependency alias. */
+  private _auditService: any;
+
   /**
-   * Get audit service
+   * Dependency setter used by the framework service DI. The service definition
+   * declares `auditService` as a dependency alias; without a setter the
+   * ServiceManager falls back to `svc.auditService = dep`, which throws on a
+   * getter-only property and fails initialisation.
+   */
+  public setAuditService(auditService: any): void {
+    this._auditService = auditService;
+  }
+
+  /**
+   * Get audit service, falling back to context resolution when the dependency
+   * was not injected (e.g. direct instantiation in tests).
    */
   private get auditService(): any {
-    return this.context.getService('core.ReactoryAuditService@1.0.0');
+    return this._auditService || this.context.getService('core.ReactoryAuditService@1.0.0');
   }
 
   /**

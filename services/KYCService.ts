@@ -42,18 +42,44 @@ class KYCService implements Reactory.Service.IReactoryService {
   }
 
   /**
-   * Get service dependencies
+   * Service dependency instances assigned by the ServiceManager via the
+   * `documentService`, `riskService` and `auditService` aliases.
+   */
+  private _documentService: any;
+  private _riskService: any;
+  private _auditService: any;
+
+  /**
+   * Dependency setters used by the framework service DI. Without them the
+   * ServiceManager falls back to `svc.<alias> = dep`, which throws on the
+   * getter-only accessors and fails initialisation of the whole service.
+   */
+  public setDocumentService(documentService: any): void {
+    this._documentService = documentService;
+  }
+
+  public setRiskService(riskService: any): void {
+    this._riskService = riskService;
+  }
+
+  public setAuditService(auditService: any): void {
+    this._auditService = auditService;
+  }
+
+  /**
+   * Get service dependencies, falling back to context resolution when they
+   * were not injected (e.g. direct instantiation in tests).
    */
   private get documentService(): any {
-    return this.context.getService('reactory-kyc.KYCDocumentService@1.0.0');
+    return this._documentService || this.context.getService('reactory-kyc.KYCDocumentService@1.0.0');
   }
 
   private get riskService(): any {
-    return this.context.getService('reactory-kyc.RiskAssessmentService@1.0.0');
+    return this._riskService || this.context.getService('reactory-kyc.RiskAssessmentService@1.0.0');
   }
 
   private get auditService(): any {
-    return this.context.getService('reactory-kyc.KYCAuditService@1.0.0');
+    return this._auditService || this.context.getService('reactory-kyc.KYCAuditService@1.0.0');
   }
 
   /**
