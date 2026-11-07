@@ -38,6 +38,7 @@ const ReactoryKYCModule: Reactory.Server.IReactoryModule = {
   clientPlugins: [],
   passportProviders: [],
   pdfs: [],
+  roles: ['KYC_ADMIN', 'KYC_REVIEWER'],
 };
 
 export default ReactoryKYCModule;
